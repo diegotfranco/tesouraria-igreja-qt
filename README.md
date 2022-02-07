@@ -1,0 +1,1 @@
+# tesouraria-igreja-qt
