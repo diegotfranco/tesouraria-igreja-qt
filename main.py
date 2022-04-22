@@ -1,5 +1,7 @@
 from datetime import datetime
+from calendar import monthrange
 from sys import argv
+import os
 from ctypes import windll
 import sqlite3
 
@@ -14,7 +16,7 @@ class Overlay(QWidget):
         palette = QPalette(self.palette())
         palette.setColor(palette.Window, Qt.transparent)
         self.setPalette(palette)
-              
+
     def paintEvent(self, event):
         painter = QPainter()
         painter.begin(self)
@@ -39,7 +41,6 @@ class Dialog2(QDialog):
         self.ui.setupUi(self)
 
 
-#TODO dimunir o tamanho do scroll dentro da main
 class MainWindow(QMainWindow):
 
 	def __init__(self):
@@ -54,29 +55,11 @@ class MainWindow(QMainWindow):
 		self.popup.setMinimumHeight(1080)
 		self.popup.hide()
 
-		self.ui.tableWidget_membros.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-		self.ui.tableWidget_membros.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-
-		self.ui.tableWidget_historico.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-
-		self.ui.tableWidget_entrada.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-		self.ui.tableWidget_entrada.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
-
-		self.ui.tableWidget_saida.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-		self.ui.tableWidget_saida.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-
-		self.ui.tableWidget_lista_entrada.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-
-		self.ui.tableWidget_lista_saida.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
-		self.ui.tableWidget_lista_saida.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
-
-
-		self.atualizaSaldoAnterior()
 		self.atualizaPorcentagemDizimo()
 		self.atualizaPorcentagemOfertas()
 		
 		self.showMaximized()
-		self.show()
+		self.fazBackUp()
 
 		##########################################################################
 		#SINAIS DE CONTROLE
@@ -84,14 +67,10 @@ class MainWindow(QMainWindow):
 		self.ui.lineEdit_data_ref.installEventFilter(self)
 		self.ui.lineEdit_data_dep.installEventFilter(self)
 		self.ui.lineEdit_data_saida.installEventFilter(self)
-		self.ui.lineEdit_financ_data_inicio.installEventFilter(self)
-		self.ui.lineEdit_financ_data_fim.installEventFilter(self)
 		self.ui.lineEdit_data_nasc.textChanged.connect(self.formataData)
 		self.ui.lineEdit_data_ref.textChanged.connect(self.formataData)
 		self.ui.lineEdit_data_dep.textChanged.connect(self.formataData)
 		self.ui.lineEdit_data_saida.textChanged.connect(self.formataData)
-		self.ui.lineEdit_financ_data_inicio.textChanged.connect(self.formataData)
-		self.ui.lineEdit_financ_data_fim.textChanged.connect(self.formataData)
 		#---------------------------------------------------------------#
 		self.ui.lineEdit_cep.textEdited.connect(self.formataCep)
 		self.ui.lineEdit_celular.textEdited.connect(self.formataCelular)
@@ -111,8 +90,10 @@ class MainWindow(QMainWindow):
 
 		##########################################################################
 		#BOTAO ENTRAR
-		self.ui.pushButton_entrar.clicked.connect(self.verificaCredenciais)
+		self.ui.lineEdit_email_login.returnPressed.connect(lambda: self.ui.frame_21.focusNextChild())
+		self.ui.lineEdit_senha_login.returnPressed.connect(self.verificaCredenciais)
 		self.ui.lineEdit_senha_login.setEchoMode(QLineEdit.Password)
+		self.ui.pushButton_entrar.clicked.connect(self.verificaCredenciais)
 	
 		##########################################################################
 		#PAGINAS
@@ -136,7 +117,8 @@ class MainWindow(QMainWindow):
 		self.ui.pushButton_saidas.clicked.connect(lambda: self.ui.pages.setCurrentWidget(self.ui.saidas))
 
 		self.ui.pushButton_financeiro.clicked.connect(self.limpaCampos)
-		self.ui.pushButton_financeiro.clicked.connect(lambda: self.ui.pages.setCurrentWidget(self.ui.financeiro))
+		self.ui.pushButton_financeiro.clicked.connect(self.carregaFinanceiro)
+		
 		
 		##########################################################################
 		#ATUALIZA AUTOCOMPLETAR
@@ -148,6 +130,7 @@ class MainWindow(QMainWindow):
 		################################################################
 		#BOTAO SAIR
 		self.ui.pushButton_sair.clicked.connect(lambda: self.ui.inicio.setCurrentWidget(self.ui.login))
+		self.ui.pushButton_sair.clicked.connect(lambda: self.ui.pages.setCurrentWidget(self.ui.home))
 
 		################################################################
 		#BOTAO SALVAR CADASTRO
@@ -155,6 +138,7 @@ class MainWindow(QMainWindow):
 
 		################################################################
 		#BOTAO BUSCA MEMBRO
+		self.ui.lineEdit_busca_membro.returnPressed.connect(self.carregaMembros)
 		self.ui.toolButton_busca_membro.clicked.connect(self.carregaMembros)
 
 		################################################################
@@ -189,8 +173,36 @@ class MainWindow(QMainWindow):
 		self.ui.btn_voltar_financeiro.clicked.connect(lambda: self.ui.pages.setCurrentWidget(self.ui.financeiro))
 
 		################################################################
+		#BOTAO FECHAR CAIXA FINANCEIRO
+		self.ui.btn_fechar_caixa.clicked.connect(self.fechaSaldosAnteriores)
+		
+		################################################################
 		#BOTAO EXPORTAR FINANCEIRO
 		self.ui.btn_exportar_pdf.clicked.connect(self.geraPDF)
+
+		#DISPOSIÇÃO DAS TABELAS
+		self.ui.tableWidget_membros.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+		self.ui.tableWidget_membros.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+		#---------------------------------------------------------------#
+		self.ui.tableWidget_historico.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+		#---------------------------------------------------------------#
+		self.ui.tableWidget_entrada.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+		self.ui.tableWidget_entrada.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
+		#---------------------------------------------------------------#
+		self.ui.tableWidget_saida.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+		self.ui.tableWidget_saida.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+		#---------------------------------------------------------------#
+		self.ui.tableWidget_lista_entrada.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+		#---------------------------------------------------------------#
+		self.ui.tableWidget_lista_saida.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeToContents)
+		self.ui.tableWidget_lista_saida.horizontalHeader().setSectionResizeMode(1, QHeaderView.Fixed)
+		self.ui.tableWidget_lista_saida.horizontalHeader().resizeSection(1, 110)
+		self.ui.tableWidget_lista_saida.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
+		self.ui.tableWidget_lista_saida.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)
+		self.ui.tableWidget_lista_saida.horizontalHeader().resizeSection(3, 110)
+
+
+#TODO botao de fechar caixa!!!
 
 	def limpaCampos(self):
 
@@ -277,71 +289,173 @@ class MainWindow(QMainWindow):
 			self.popup.show()
 			msg.exec()
 			self.popup.hide()
-
-	def atualizaSaldoAnterior(self):
+	
+	def traduzMes(self, mes):
+		match mes:
+			case '01':
+				return 'janeiro'
+			case '02':
+				return 'fevereiro'
+			case '03':
+				return 'março'
+			case '04':
+				return 'abril'
+			case '05':
+				return 'maio'
+			case '06':
+				return 'junho'
+			case '07':
+				return 'julho'
+			case '08':
+				return 'agosto'
+			case '09':
+				return 'setembro'
+			case '10':
+				return 'outubro'
+			case '11':
+				return 'novembro'
+			case '12':
+				return 'dezembro'
+	
+	def verificaSaldosAnteriores(self, data=datetime.now().date()):
+		print(data)
+		meses = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12']
 
 		try:
-			query = f"select * from caixa where data = date('now', 'start of month')"
+			query = f"select data from caixa where data between date('now', 'start of year') and date('{data}')"
 			cursor.execute(query)
-			caixaMes = cursor.fetchone()
+			caixaMeses = cursor.fetchall()
 		except sqlite3.Error as erro:
 			print('Erro com o banco de dados: ', erro)
 			return
 
+		caixaMeses = [mes[0][5:7] for mes in caixaMeses]
+		caixaMes = [mes for mes in meses[:data.month] if mes not in caixaMeses]
+		print(f'meses em aberto = {caixaMes}')
+		
 		if not caixaMes:
-			try:
-				query = f'''SELECT 			sum(dizimo),
-											sum(doacao_terenos),
-											sum(doacao_missoes),
-											sum(doacao_pam),
-											sum(doacao_campanha) 
-										FROM (
-												SELECT	data_referencia,
-														dizimo,
-														doacao_terenos,
-														doacao_missoes,
-														doacao_pam,
-														doacao_campanha
+			return
+		elif len(caixaMes) > 1:
+			lista = []; lista2 = []
+			for mes in caixaMes[:9]:
+				lista.append(self.traduzMes(mes))
+			lista = ", ".join(lista)
 
-												FROM entradas
-												WHERE data_referencia
-												BETWEEN date('now', 'start of month') AND date('now', 'start of month', '+1 month', '-1 day')
-											)
-										WHERE (dizimo != '' OR dizimo > 0) and 
-											(doacao_terenos != '' or doacao_terenos > 0) and
-											(doacao_missoes != '' or doacao_missoes > 0) and
-											(doacao_pam != '' or doacao_pam > 0) and
-											(doacao_campanha != '' or doacao_campanha > 0)'''
-				cursor.execute(query)
-				entrada = cursor.fetchone()
-
-				query = f"SELECT sum(valor) FROM saidas WHERE data BETWEEN date('now', 'start of month') AND date('now', 'start of month', '+1 month', '-1 day')"
-				
-				cursor.execute(query)
-				saida = cursor.fetchone()
-
-				query = f'''SELECT saldo_anterior, caixa_terenos, sum(doacao_terenos) FROM caixa, entradas  
-							WHERE (entradas.data_referencia BETWEEN date('now', 'start of month') AND date('now', 'start of month', '+1 month', '-1 day'))
-							 AND (caixa.data BETWEEN date('now', 'start of month') AND date('now', 'start of month', '+1 month', '-1 day'))'''
-				
-				cursor.execute(query)
-				caixa = cursor.fetchone()
-			except sqlite3.Error as erro:
-				print('Erro com o banco de dados: ', erro)
-				return
+			for mes in caixaMes[9:]:
+				lista2.append(self.traduzMes(mes))
+			lista2 = ", ".join(lista2)
 			
-			try:
-				query = f"INSERT INTO caixa VALUES (date('now', '+1 month','start of month'), {sum(entrada)-saida[0]+caixa[0]:.2f}, {caixa[1]+caixa[2]:.2f})"
-				cursor.execute(query)
-				banco.commit()
-			except sqlite3.Error as erro:
-				print('Erro com o banco de dados: ', erro)
-			
+			if not lista2:
+				lista = lista[::-1].replace(',', 'e ', 1)[::-1]
+			else:
+				lista2 = lista2[::-1].replace(',', 'e ', 1)[::-1]
+				lista2 += ' ' #espaço no final apenas se a lista2 existir
 
+			msg = Dialog2(self)
+			msg.ui.label.setText(f'Os meses {lista}')
+			msg.ui.label_2.setText(f'{lista2}ainda não foram fechados!')					
+			self.popup.show()
+			msg.exec()
+			self.popup.hide()
+			return caixaMes
+		else:
+			return self.atualizaSaldoAnterior(caixaMes[0])
+
+	
+	def fechaSaldosAnteriores(self):
+		meses_abertos = self.verificaSaldosAnteriores(datetime.now().date())
+		if meses_abertos:
+			for mes in meses_abertos:
+				self.atualizaSaldoAnterior(mes)
+		else:
+			msg = Dialog2(self)
+			msg.ui.label.setText(f'Não existem caixas abertos!')
+			self.popup.show()
+			msg.exec()
+			self.popup.hide()
+
+	def atualizaSaldoAnterior(self, caixaMes = None):
+		if caixaMes:
+			mes = self.traduzMes(caixaMes)
+			data = datetime.fromisoformat(f'{datetime.now().year}-{caixaMes}-{datetime.now().day}').date()
+
+			msg = Dialog(self)
+			msg.ui.label.setText(f'O caixa de {mes} ainda não foi fechado,')
+			msg.ui.label_2.setText(f'gostaria de fechar agora?')
+			self.popup.show()
+			if msg.exec():
+				msg2 = Dialog2(self)
+				try:
+					query = f'''SELECT 	sum(dizimo),
+										sum(doacao_terenos),
+										sum(doacao_missoes),
+										sum(doacao_pam),
+										sum(doacao_campanha) 
+								FROM (
+										SELECT	data_referencia,
+												dizimo,
+												doacao_terenos,
+												doacao_missoes,
+												doacao_pam,
+												doacao_campanha
+
+										FROM entradas
+										WHERE data_referencia
+										BETWEEN date('{data}','-1 month', 'start of month') AND date('{data}', 'start of month', '-1 day')
+									)
+								WHERE (dizimo != '' OR dizimo > 0) and 
+									(doacao_terenos != '' or doacao_terenos > 0) and
+									(doacao_missoes != '' or doacao_missoes > 0) and
+									(doacao_pam != '' or doacao_pam > 0) and
+									(doacao_campanha != '' or doacao_campanha > 0)'''
+
+					cursor.execute(query)
+					entrada = cursor.fetchone()
+
+					query = f"SELECT sum(valor) FROM saidas WHERE data BETWEEN date('{data}', '-1 month', 'start of month') AND date('{data}', 'start of month', '-1 day')"
+					
+					cursor.execute(query)
+					saida = cursor.fetchone()
+
+					query = f'''SELECT saldo_anterior, caixa_terenos, sum(doacao_terenos) FROM caixa, entradas  
+								WHERE (entradas.data_referencia BETWEEN date('{data}', '-1 month', 'start of month') AND date('{data}', 'start of month', '-1 day'))
+								AND (caixa.data BETWEEN date('{data}','-1 month', 'start of month') AND date('{data}', 'start of month', '-1 day'))'''
+					
+					cursor.execute(query)
+					caixa = cursor.fetchone()
+				except sqlite3.Error as erro:
+					print('Erro com o banco de dados: ', erro)
+					msg2.ui.label.setText(f'Ocorreu um erro ao fechar o caixa1!')					
+					msg2.exec()
+					self.popup.hide()
+					return
+			
+				try:
+					query = f"INSERT INTO caixa VALUES ('{data}', {sum(entrada)-saida[0]+caixa[0]:.2f}, {caixa[1]+caixa[2]:.2f})"
+					cursor.execute(query)
+					banco.commit()
+				except sqlite3.Error as erro:
+					print('Erro com o banco de dados: ', erro)
+					msg2.ui.label.setText(f'Ocorreu um erro ao fechar o caixa2!')
+					msg2.exec()
+					self.popup.hide()
+					return
+				
+				msg2.ui.label.setText(f'Caixa fechado com sucesso.')
+				msg2.exec()
+			self.popup.hide()
+			
 
 	def salvarArquivo(self):
 		resposta = QFileDialog.getSaveFileName(parent= self, caption='Salvar como', filter='Todos Arquivos (*.*) ;; Documento PDF (*.pdf)', selectedFilter='Documento PDF (*.pdf)')
 		return resposta[0]
+
+	def carregaFinanceiro(self):
+		self.ui.pages.setCurrentWidget(self.ui.financeiro)
+		self.ui.lineEdit_financ_data_inicio.setDate(QDate(datetime.now().year, datetime.now().month, 1))
+		self.ui.lineEdit_financ_data_fim.setDate(QDate(datetime.now().year, datetime.now().month, monthrange(datetime.now().year, datetime.now().month)[1]))
+		self.ui.lineEdit_financ_data_inicio.setSelectedSection(QDateEdit.NoSection)
+		self.ui.lineEdit_financ_data_fim.setSelectedSection(QDateEdit.NoSection)
 
 	def buscaDadosFinanceiro(self):
 		
@@ -376,11 +490,11 @@ class MainWindow(QMainWindow):
 		if tipo == 'Entrada':
 			try:
 				query = f'''SELECT data_referencia,
- 										sum(dizimo),
- 										sum(doacao_terenos),
- 										sum(doacao_missoes),
- 										sum(doacao_pam),
- 										sum(doacao_campanha) 
+										sum(dizimo),
+										sum(doacao_terenos),
+										sum(doacao_missoes),
+										sum(doacao_pam),
+										sum(doacao_campanha) 
  									FROM (
  											SELECT	data_referencia,
  													dizimo,
@@ -474,6 +588,26 @@ class MainWindow(QMainWindow):
 			self.ui.pagFinanceiro.setCurrentWidget(self.ui.tabela_saida)
 		
 		elif tipo == 'Entrada/Saída':
+			if datetime.now().month < int(data_inicio[1][4]):
+				msg = Dialog2(self)
+				msg.ui.label.setText(f'Data inicial da busca supercede')
+				msg.ui.label_2.setText(f'a data atual!')
+				self.popup.show()
+				msg.exec()
+				self.popup.hide()
+				return
+
+			if int(data_inicio[1][4]) > int(data_fim[1][4]):
+				msg = Dialog2(self)
+				msg.ui.label.setText(f'Data inicial da busca supercede')
+				msg.ui.label_2.setText(f'a data final!')
+				self.popup.show()
+				msg.exec()
+				self.popup.hide()
+				return
+
+			self.verificaSaldosAnteriores(datetime.fromisoformat("-".join(data_fim[1].split("/")[::-1])).date())
+			
 			try:
 				query = f'''SELECT data_referencia,
  										sum(dizimo),
@@ -580,6 +714,15 @@ class MainWindow(QMainWindow):
 			tudoOK = False
 		else:
 			self.ui.label_aviso_financ_data_inicio.setText('')
+
+		if datetime.now().month < int(data_inicio[1][4]):
+				msg = Dialog2(self)
+				msg.ui.label.setText(f'Data inicial da busca supercede')
+				msg.ui.label_2.setText(f'a data atual!')
+				self.popup.show()
+				msg.exec()
+				self.popup.hide()
+				return
 		
 		if data_fim[1] == '':
 			self.ui.label_aviso_financ_data_fim.setText('Campo Obrigatório!')
@@ -590,10 +733,21 @@ class MainWindow(QMainWindow):
 			tudoOK = False
 		else:
 			self.ui.label_aviso_financ_data_fim.setText('')
+
+		if int(data_inicio[1][4]) > int(data_fim[1][4]):
+				msg = Dialog2(self)
+				msg.ui.label.setText(f'Data inicial da busca supercede')
+				msg.ui.label_2.setText(f'a data final!')
+				self.popup.show()
+				msg.exec()
+				self.popup.hide()
+				return
 		
 		if not tudoOK:
 			return
 		
+		self.verificaSaldosAnteriores(datetime.fromisoformat("-".join(data_fim[1].split("/")[::-1])).date())
+
 		try:
 			query = f'''SELECT data_referencia,
 									sum(dizimo),
@@ -925,6 +1079,7 @@ class MainWindow(QMainWindow):
 			self.ui.meio_lista_entrada_2.setMaximumHeight(16777215)
 		self.ui.tableWidget_lista_entrada.blockSignals(False)
 		self.ui.pages.setCurrentWidget(self.ui.lista_entrada)
+		self.ui.lista_entrada.setFocus()
 
 	def atualizaEntrada(self, item):
 
@@ -1166,6 +1321,7 @@ class MainWindow(QMainWindow):
 			self.ui.meio_lista_saida_2.setMaximumHeight(16777215)
 		self.ui.tableWidget_lista_saida.blockSignals(False)
 		self.ui.pages.setCurrentWidget(self.ui.lista_saida)
+		self.ui.lista_saida.setFocus()
 
 	def atualizaSaida(self, item):
 
@@ -1522,10 +1678,45 @@ class MainWindow(QMainWindow):
 			if linha[0] == nome and linha[1] == senha:
 				self.ui.label_avisos.setText('')
 				self.ui.inicio.setCurrentWidget(self.ui.main)
+				self.verificaSaldosAnteriores()
 				return
 			self.ui.label_avisos.setText('Usuário/senha inválidos!')
 
+	def fazBackUp(self):
+		diaAtual = (str(datetime.now())[:10], )
 
+		files = next(os.walk('./db'))[2]
+		print(files)
+
+		for file in files:
+			if 'backup_' in file:
+				d1 = datetime.fromisoformat(diaAtual[0])
+				d2 = datetime.fromisoformat(file[7:-4])
+				# print(f'dias atras: {(d1-d2).days}')
+				if (d1-d2).days > 6:
+					print(f'removi {file}')
+					os.remove('./db/'+file)
+		try:
+			query = f"SELECT rowid FROM backup WHERE data = ?"
+			cursor.execute(query, diaAtual)
+			ult_backup = cursor.fetchone()
+		except sqlite3.Error as erro:
+			print('Erro com o banco de dados: ', erro)
+
+		print(f'rowid do backup de hj = {ult_backup}')
+		if not ult_backup:
+			try:
+				query = f"INSERT INTO backup (data) VALUES (?)"
+				cursor.execute(query, diaAtual)
+				banco.commit()
+			except sqlite3.Error as erro:
+				print('Erro com o banco de dados: ', erro)
+				return
+
+			print(f'fiz backup do dia {diaAtual[0]}')
+			with open(f'db/backup_{diaAtual[0]}.sql', 'w', encoding="utf-8") as f:
+				for line in banco.iterdump():
+					f.write(f'{line}\n')
 
 if __name__ == '__main__':
 
