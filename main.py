@@ -72,6 +72,13 @@ class MainWindow(QMainWindow):
 		self.ui.lineEdit_data_dep.textChanged.connect(self.formataData)
 		self.ui.lineEdit_data_saida.textChanged.connect(self.formataData)
 		#---------------------------------------------------------------#
+		self.ui.lineEdit_dizimo_entrada.textEdited.connect(self.formataDecimal)
+		self.ui.lineEdit_terenos_entrada.textEdited.connect(self.formataDecimal)
+		self.ui.lineEdit_missoes_entrada.textEdited.connect(self.formataDecimal)
+		self.ui.lineEdit_pam_entrada.textEdited.connect(self.formataDecimal)	
+		self.ui.lineEdit_campanha_valor_entrada.textEdited.connect(self.formataDecimal)
+		self.ui.lineEdit_valor_saida.textEdited.connect(self.formataDecimal)
+		#---------------------------------------------------------------#
 		self.ui.lineEdit_cep.textEdited.connect(self.formataCep)
 		self.ui.lineEdit_celular.textEdited.connect(self.formataCelular)
 		#---------------------------------------------------------------#
@@ -201,9 +208,6 @@ class MainWindow(QMainWindow):
 		self.ui.tableWidget_lista_saida.horizontalHeader().setSectionResizeMode(3, QHeaderView.Fixed)
 		self.ui.tableWidget_lista_saida.horizontalHeader().resizeSection(3, 110)
 
-
-#TODO botao de fechar caixa!!!
-
 	def limpaCampos(self):
 
 		if self.ui.pages.currentWidget().objectName() == 'home':
@@ -224,32 +228,27 @@ class MainWindow(QMainWindow):
 
 	def formataNumeroEntrada(self, cadeia):
 		try:
-
 			float(cadeia)
 			return cadeia
 		except ValueError:
 
 			try:
-
 				temp = cadeia
 				cadeia = cadeia[:-3].replace('.', '') + cadeia[-3:]
 				cadeia = cadeia[:-3] + cadeia[-3:].replace(',', '.')
 				float(cadeia)
 				return cadeia
 			except ValueError:
-
 				cadeia = temp
 				cadeia = cadeia[3:]
 				cadeia = cadeia[:-3].replace('.', '') + cadeia[-3:]
 				cadeia = cadeia[:-3] + cadeia[-3:].replace(',', '.')
-				try:
 
+				try:
 					float(cadeia)
 					return cadeia
 				except ValueError:
-
 					msg = Dialog2(self)
-					#msg.setWindowTitle('Ops, algo deu errado!')
 					msg.ui.label.setText('Não foi possivel fazer esta alteração!')
 					msg.ui.label_2.setText('O número parece ser inválido.')
 					self.popup.show()
@@ -267,7 +266,6 @@ class MainWindow(QMainWindow):
 
 	def formataDataEntrada(self, cadeia):
 		try:
-
 			if len(cadeia) != 10:
 				raise ValueError
 
@@ -283,12 +281,33 @@ class MainWindow(QMainWindow):
 		except ValueError:
 			
 			msg = Dialog2(self)
-			#msg.setWindowTitle('Ops, algo deu errado!')
 			msg.ui.label.setText('Não foi possivel fazer esta alteração!')
 			msg.ui.label_2.setText('A data parece ser inválida.')
 			self.popup.show()
 			msg.exec()
 			self.popup.hide()
+	
+	def formataDecimal(self):
+		current_widget = self.ui.pages.focusWidget()
+		txt = current_widget.text()
+		tam = len(txt)
+
+		if tam == 2:
+			current_widget.setText( '0,' + txt)
+		elif tam == 3:
+			txt = txt.replace(',', '')
+			txt = '0,' + txt
+			current_widget.setText(txt)
+		elif tam == 5:
+			txt = txt.replace(',', '')
+			if txt[0] == '0':
+				txt = txt[1:]
+			txt = txt[:-2] + ',' + txt[-2:]
+			current_widget.setText(txt)
+		elif tam > 5:
+			txt = txt.replace(',', '')
+			txt = txt[:-2] + ',' + txt[-2:]
+			current_widget.setText(txt)
 	
 	def traduzMes(self, mes):
 		match mes:
@@ -895,10 +914,10 @@ class MainWindow(QMainWindow):
 	def eventFilter(self, source, event):
 
 		if event.type() == QEvent.KeyPress and source in [self.ui.lineEdit_data_nasc, self.ui.lineEdit_data_ref, self.ui.lineEdit_data_dep,
-		 													self.ui.lineEdit_data_saida, self.ui.lineEdit_financ_data_inicio, self.ui.lineEdit_financ_data_fim]:
+															self.ui.lineEdit_data_saida, self.ui.lineEdit_financ_data_inicio, self.ui.lineEdit_financ_data_fim]:
 			if event.key() == Qt.Key_Backspace and not source.hasSelectedText():
 				
-				pos = source.cursorPosition()
+				pos = source.cursorPosition() #rato
 				txt = source.text()
 
 				if pos >= 2 and txt[source.cursorPosition()-2] == '/':
@@ -926,6 +945,7 @@ class MainWindow(QMainWindow):
 				else:
 					source.setCursorPosition(pos)
 				return True	
+			
 		return False
 
 	def formataData(self, txt):

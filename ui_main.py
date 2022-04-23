@@ -1999,7 +1999,7 @@ class Ui_MainWindow(object):
 	"QLineEdit{border-radius: 22px; border-width: 1px; border-style: solid; border-color: #c4c4c4; padding-left:16px}")
 
 		###########################################################################
-		self.lineEdit_dizimo_entrada.setValidator(self.validaValor)
+		#self.lineEdit_dizimo_entrada.setValidator(self.validaValor)
 		self.lineEdit_dizimo_entrada.setMaxLength(9)
 		self.lineEdit_dizimo_entrada.setInputMethodHints(Qt.ImhFormattedNumbersOnly)
 		###########################################################################
@@ -2036,7 +2036,7 @@ class Ui_MainWindow(object):
 	"QLineEdit{border-radius: 22px; border-width: 1px; border-style: solid; border-color: #c4c4c4; padding-left:16px}")
 
 		#############################################################################
-		self.lineEdit_terenos_entrada.setValidator(self.validaValor)
+		# self.lineEdit_terenos_entrada.setValidator(self.validaValor)
 		self.lineEdit_terenos_entrada.setMaxLength(9)
 		self.lineEdit_terenos_entrada.setInputMethodHints(Qt.ImhFormattedNumbersOnly)
 		#############################################################################
@@ -2073,7 +2073,7 @@ class Ui_MainWindow(object):
 	"QLineEdit{border-radius: 22px; border-width: 1px; border-style: solid; border-color: #c4c4c4; padding-left:16px}")
 
 		#############################################################################
-		self.lineEdit_missoes_entrada.setValidator(self.validaValor)
+		# self.lineEdit_missoes_entrada.setValidator(self.validaValor)
 		self.lineEdit_missoes_entrada.setMaxLength(9)
 		self.lineEdit_missoes_entrada.setInputMethodHints(Qt.ImhFormattedNumbersOnly)
 		#############################################################################
@@ -2111,7 +2111,7 @@ class Ui_MainWindow(object):
 	"QLineEdit{border-radius: 22px; border-width: 1px; border-style: solid; border-color: #c4c4c4; padding-left:16px}")
 
 		#########################################################################
-		self.lineEdit_pam_entrada.setValidator(self.validaValor)
+		# self.lineEdit_pam_entrada.setValidator(self.validaValor)
 		self.lineEdit_pam_entrada.setMaxLength(9)
 		self.lineEdit_pam_entrada.setInputMethodHints(Qt.ImhFormattedNumbersOnly)
 		#########################################################################
@@ -2282,7 +2282,7 @@ class Ui_MainWindow(object):
 	"QLineEdit{border-radius: 22px; border-width: 1px; border-style: solid; border-color: #c4c4c4; padding-left:16px}")
 
 		####################################################################################
-		self.lineEdit_campanha_valor_entrada.setValidator(self.validaValor)
+		# self.lineEdit_campanha_valor_entrada.setValidator(self.validaValor)
 		self.lineEdit_campanha_valor_entrada.setMaxLength(9)
 		self.lineEdit_campanha_valor_entrada.setInputMethodHints(Qt.ImhFormattedNumbersOnly)
 		####################################################################################
@@ -2554,7 +2554,7 @@ class Ui_MainWindow(object):
 	"QLineEdit{border-radius: 22px; border-width: 1px; border-style: solid; border-color: #c4c4c4; padding-left:16px}")
 
 		########################################################
-		self.lineEdit_valor_saida.setValidator(self.validaValor)
+		# self.lineEdit_valor_saida.setValidator(self.validaValor)
 		self.lineEdit_valor_saida.setMaxLength(9)
 		self.lineEdit_valor_saida.setInputMethodHints(Qt.ImhFormattedNumbersOnly)
 		########################################################
@@ -3423,7 +3423,7 @@ class Ui_MainWindow(object):
 		self.btn_fechar_caixa = QPushButton(self.inferior_financeiro_2)
 		self.btn_fechar_caixa.setObjectName(u"btn_fechar_caixa")
 		self.btn_fechar_caixa.setCursor(QCursor(Qt.PointingHandCursor))
-		self.btn_fechar_caixa.setMinimumSize(QSize(170, 50))
+		self.btn_fechar_caixa.setMinimumSize(QSize(180, 50))
 		font23 = QFont()
 		font23.setPointSize(19)
 		font23.setBold(True)
